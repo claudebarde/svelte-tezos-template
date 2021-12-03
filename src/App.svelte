@@ -7,6 +7,7 @@
 
   let Tezos: TezosToolkit;
   let wallet: BeaconWallet;
+  let userAddress: string;
   let subscription: HubConnection;
   let blockHead: { protocol: string; level: number; lastUpdate: string };
 
@@ -22,10 +23,6 @@
 
   const connect = async () => {
     try {
-      wallet = new BeaconWallet({
-        name: "Svelte Tezos Template",
-        preferredNetwork: NetworkType.MAINNET
-      });
       await wallet.requestPermissions({
         network: {
           type: NetworkType.MAINNET,
@@ -33,6 +30,7 @@
         }
       });
       Tezos.setWalletProvider(wallet);
+      userAddress = await wallet.getPKH();
     } catch (err) {
       console.error(err);
     }
@@ -41,6 +39,7 @@
   const disconnect = () => {
     wallet.client.destroy();
     wallet = undefined;
+    userAddress = undefined;
   };
 
   const subscribeToEvents = async () => {
@@ -69,6 +68,17 @@
 
   onMount(async () => {
     Tezos = new TezosToolkit(rpcUrl);
+
+    wallet = new BeaconWallet({
+      name: "Svelte Tezos Template",
+      preferredNetwork: NetworkType.MAINNET
+    });
+    const activeAccount = await wallet.client.getAccounts();
+    if (activeAccount) {
+      Tezos.setWalletProvider(wallet);
+      userAddress = await wallet.getPKH();
+    }
+
     const headerInfo = await Tezos.rpc.getBlockHeader();
     blockHead = {
       protocol: headerInfo.protocol,
@@ -182,7 +192,7 @@
     </ul>
     <br /><br />
     <div>
-      {#if wallet}
+      {#if userAddress}
         <button on:click={disconnect}>Disconnect</button>
       {:else}
         <button on:click={connect}>Connect now!</button>
